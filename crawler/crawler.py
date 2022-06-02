@@ -2,7 +2,7 @@ from concurrent import futures
 from log import log_handler
 from pconf import MAX_WORKERS, SCRAPE_LIMIT
 from typing import List, Dict
-from constants import COMPANY_RETRIEVE_URL, COMPANY_LIST_URL, BASE_HEADERS
+from constants import COMPANY_RETRIEVE_URL, COMPANY_LIST_URL
 import requests
 import concurrent.futures
 
@@ -20,24 +20,36 @@ class FetchFailureError(Exception):
 
 class Crawler:
     @staticmethod
+    def _parse_score(score: Dict) -> Dict:
+        return {
+            "industryComparison": score["industryComparison"],
+            "esgScore": score["esgScore"]["TR.TRESG"]['score'],
+            "socialScore": score["esgScore"]["TR.SocialPillar"]['score'],
+            "environmentScore": score["esgScore"]["TR.EnvironmentPillar"]['score'],
+            "governanceScore": score["esgScore"]["TR.GovernancePillar"]['score'],
+        }
+
+    @staticmethod
     def _get_companies() -> List[Dict]:
         logger.info("start fetching companies list.")
         return requests.get(COMPANY_LIST_URL).json()
 
     @staticmethod
-    def _get_company_score(company_score_retrieve_url: str):
-        req = requests.get(company_score_retrieve_url)
+    def _get_company_score(company: Dict):
+        company_ric = company['ricCode']
+        company_name = company['companyName']
+
+        req = requests.get(company_retrieve_url_generator(company_ric))
+        print(req)
         if not req:
             raise FetchFailureError(req.status_code, req.content)
-        return req
+        return company_ric, company_name, req
 
     @staticmethod
     def get_all_companies_score():
-        companies_rics = [c['ricCode'] for c in Crawler._get_companies()]
+        companies_rics = Crawler._get_companies()
 
         logger.info(f"fetched companies list. found {len(companies_rics)} companies")
-
-        urls = list(map(company_retrieve_url_generator, companies_rics))
 
         logger.info(f"starting fetching companies(limit={SCRAPE_LIMIT}) score using {MAX_WORKERS} workers.")
 
@@ -45,7 +57,7 @@ class Crawler:
         results = []
         # using with, also shutting down futures will ensure that threads are cleaned up promptly
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-            for req in executor.map(Crawler._get_company_score, urls):
+            for company_ric, company_name, req in executor.map(Crawler._get_company_score, companies_rics):
                 try:
                     if len(results) >= SCRAPE_LIMIT:
                         executor.shutdown(wait=False, cancel_futures=True)
@@ -62,7 +74,11 @@ class Crawler:
                 else:
                     # we already checked the responses status code,
                     # but it'd better to double check its valid json resp.
-                    results.append(req.json())
+                    results.append({
+                        "ric": company_ric,
+                        "score": Crawler._parse_score(req.json()),
+                        "name": company_name
+                    })
 
 
 if __name__ == '__main__':
