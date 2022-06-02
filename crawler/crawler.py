@@ -41,22 +41,28 @@ class Crawler:
 
         logger.info(f"starting fetching companies(limit={SCRAPE_LIMIT}) score using {MAX_WORKERS} workers.")
 
-        resp_ok = 0
+        # appending to list is thread-safe in python so no need to locks, ...
+        results = []
+        # using with, also shutting down futures will ensure that threads are cleaned up promptly
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-            res = executor.map(Crawler._get_company_score, urls)
-            for req in res:
+            for req in executor.map(Crawler._get_company_score, urls):
                 try:
-                    if resp_ok >= SCRAPE_LIMIT:
+                    if len(results) >= SCRAPE_LIMIT:
                         executor.shutdown(wait=False, cancel_futures=True)
                         break
                 except futures.TimeoutError as e:
+                    # Terminates if a thread lives longer than it should
                     logger.error(e)
                     break
                 except FetchFailureError as e:
+                    # Fails on non 2** requests
+                    # Its better to implement fallback adapter for requests
                     logger.error(e, e.status_code, e.content)
                     break
                 else:
-                    resp_ok = resp_ok + 1
+                    # we already checked the responses status code,
+                    # but it'd better to double check its valid json resp.
+                    results.append(req.json())
 
 
 if __name__ == '__main__':
