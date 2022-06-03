@@ -5,6 +5,7 @@ from typing import List, Dict
 from constants import COMPANY_RETRIEVE_URL, COMPANY_LIST_URL
 import requests
 import concurrent.futures
+from api.db import Repository
 
 company_retrieve_url_generator = lambda ric: f"{COMPANY_RETRIEVE_URL}?ricCode={ric}"
 
@@ -22,7 +23,7 @@ class Crawler:
     @staticmethod
     def _parse_score(score: Dict) -> Dict:
         return {
-            "industryComparison": score["industryComparison"],
+            **score["industryComparison"],
             "esgScore": score["esgScore"]["TR.TRESG"]['score'],
             "socialScore": score["esgScore"]["TR.SocialPillar"]['score'],
             "environmentScore": score["esgScore"]["TR.EnvironmentPillar"]['score'],
@@ -40,10 +41,14 @@ class Crawler:
         company_name = company['companyName']
 
         req = requests.get(company_retrieve_url_generator(company_ric))
-        print(req)
         if not req:
             raise FetchFailureError(req.status_code, req.content)
         return company_ric, company_name, req
+
+    @staticmethod
+    def save_companies(companies: List):
+        mongo = Repository()
+        mongo.upsert_companies(companies)
 
     @staticmethod
     def get_all_companies_score():
@@ -75,10 +80,12 @@ class Crawler:
                     # we already checked the responses status code,
                     # but it'd better to double check its valid json resp.
                     results.append({
-                        "ric": company_ric,
-                        "score": Crawler._parse_score(req.json()),
-                        "name": company_name
+                        "_id": company_ric,
+                        "name": company_name,
+                        **Crawler._parse_score(req.json()),
                     })
+
+        Crawler.save_companies(results)
 
 
 if __name__ == '__main__':

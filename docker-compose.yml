@@ -1,0 +1,50 @@
+version: '3'
+services:
+
+  mongodb:
+    image: mongo:4.0.8
+    container_name: mongodb
+    restart: unless-stopped
+    command: mongod --auth
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: interview
+      MONGO_INITDB_ROOT_PASSWORD: interview
+      MONGO_INITDB_DATABASE: interview
+      MONGODB_DATA_DIR: /data/db
+    volumes:
+      - mongodbdata:/data/db
+    networks:
+      - backend
+
+  flask:
+    build:
+      context: .
+      dockerfile: api/deploy/Dockerfile
+    container_name: flask
+    image: digitalocean.com/flask-python:3.9
+    restart: unless-stopped
+    ports:
+      - 5000:5000
+    env_file:
+      - staging.env
+    environment:
+      - FLASK_DEBUG=1
+      - FLASK_APP=api/app.py
+    volumes:
+      - appdata:/var/www
+    depends_on:
+      - mongodb
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  mongodbdata:
+    driver: local
+  appdata:
+    driver: local
