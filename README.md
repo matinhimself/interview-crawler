@@ -61,3 +61,4 @@ since there are only two endpoints, I didn't document it using any standard api 
 - crawler and api are using same db package repository having different domains
 - better config solutions instead of a simple .env file
 - the api authentication is missing its logic due to simplicity of testing process
+- the website is behind cloudfront cdn so there is a chance that its ddos protection ip-ban crawler. but because of limited amount of data (10,000 in total), it can be prevented by just delaying requests. by default it does more than 40 requests per second on 8-core cpu. 
