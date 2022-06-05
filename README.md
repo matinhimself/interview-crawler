@@ -19,12 +19,12 @@ python3 crawler.py
 
 ## Api
 
-### Run api service using docker compose
+### Run api and mongodb service using docker compose
 
 ```
    cp .env.sample .env
    
-   docker-compose up flask
+   docker-compose up 
 ```
 
 ## usage
