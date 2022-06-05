@@ -4,13 +4,13 @@ EXPOSE 5000
 
 WORKDIR /app
 
-RUN echo $(ls)
 COPY ./requirements.txt .
-COPY ./staging.env .env
 
 RUN apt-get update
 
 RUN pip install -r requirements.txt
+
+COPY ./.env .env
 
 COPY .. /app
 

@@ -46,9 +46,9 @@ class Crawler:
         return company_ric, company_name, req
 
     @staticmethod
-    def save_companies(companies: List):
+    def save_companies(companies: List) -> int:
         mongo = Repository()
-        mongo.upsert_companies(companies)
+        return mongo.upsert_companies(companies)
 
     @staticmethod
     def get_all_companies_score():
@@ -84,8 +84,11 @@ class Crawler:
                         "name": company_name,
                         **Crawler._parse_score(req.json()),
                     })
-
-        Crawler.save_companies(results)
+        try:
+            upserted_count = Crawler.save_companies(results)
+            logger.info(f"successfully upserted {upserted_count} documents")
+        except Exception as e:
+            logger.error(e)
 
 
 if __name__ == '__main__':

@@ -28,7 +28,7 @@ services:
     ports:
       - 5000:5000
     env_file:
-      - staging.env
+      - .env
     environment:
       - FLASK_DEBUG=1
       - FLASK_APP=api/app.py

@@ -19,12 +19,13 @@ class Repository:
 
     def get_companies_names_like(self, name, limit=10, skip=0):
         return self.companies_collection.find(
-            {
+            filter={
                 "name": {
                     "$regex": f"^{name}"
                 }
             },
-            {
+            projection={
+
                 "name": 1,
             },
             limit=limit,
@@ -47,6 +48,6 @@ class Repository:
                 {'$setOnInsert': x},
                 upsert=True) for x in companies
         ]
-        self.companies_collection.bulk_write(
+        return self.companies_collection.bulk_write(
             upserts
-        )
+        ).upserted_count
