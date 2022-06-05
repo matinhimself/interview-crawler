@@ -5,7 +5,7 @@ from typing import List, Dict
 from constants import COMPANY_RETRIEVE_URL, COMPANY_LIST_URL
 import requests
 import concurrent.futures
-from api.db import Repository
+from db import Repository
 
 company_retrieve_url_generator = lambda ric: f"{COMPANY_RETRIEVE_URL}?ricCode={ric}"
 
@@ -84,9 +84,10 @@ class Crawler:
                         "name": company_name,
                         **Crawler._parse_score(req.json()),
                     })
+        logger.info(f"successfully fetched {len(results)} results.")
         try:
             upserted_count = Crawler.save_companies(results)
-            logger.info(f"successfully upserted {upserted_count} documents")
+            logger.info(f"successfully upserted {upserted_count} documents.")
         except Exception as e:
             logger.error(e)
 
